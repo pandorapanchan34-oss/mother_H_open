@@ -1,0 +1,26 @@
+﻿# CMake and compiler build outputs
+/build/
+/build_ninja/
+/build_ninja_ucrt_preset/
+/build_numeric_check/
+
+# Local Windows Python environment
+/.venv-win/
+
+# Common compiler outputs (in case generated outside the build directories)
+*.obj
+*.o
+*.a
+*.lib
+*.dll
+*.exe
+*.pdb
+
+# Timestamped/editor backup copies
+*.bak
+*.bak_*
+
+/imports/
+
+# CMake preset build outputs
+/out/

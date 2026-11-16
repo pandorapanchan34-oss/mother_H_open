@@ -1,0 +1,12 @@
+﻿Mother_H
+Copyright 2026 tsukasa (pandorapanchan34-oss)
+
+This product includes software developed by tsukasa (pandorapanchan34-oss).
+
+本リポジトリの領域 A（Mother_H 安全コアおよび公開契約仕様）は Apache License, Version 2.0 の下で提供されます。
+The Domain A (Mother_H Security Core and public contract specifications) of this repository is licensed under the Apache License, Version 2.0.
+
+Apache-2.0 applies only to assets explicitly designated as Domain A. It does not grant a license to assets assigned to other domains or to imported materials unless a separate license notice expressly provides otherwise.
+
+本プロダクトが依存または参照する外部サードパーティ製ソフトウェア（OpenSSL、Boost 等）は、それぞれの原著作者のライセンスの下で提供されており、Apache-2.0 によって再ライセンスされるものではありません。詳細については docs/THIRD_PARTY_LICENSES.md を参照してください。
+Third-party software components that this product depends on or references (including OpenSSL and Boost) are provided under their respective original licenses and are not relicensed under Apache-2.0. For detailed information regarding third-party software licenses and rights boundaries, please refer to docs/THIRD_PARTY_LICENSES.md.
