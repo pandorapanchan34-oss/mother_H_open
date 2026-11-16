@@ -1,7 +1,18 @@
-# Mother_H
+﻿# Mother_H
 
-Mother_H は、FSM、認証付きイベント記録、リソース制限、チェックポイントと復旧処理を提供する C++17 の安全コアです。検証できない状態では許可を広げず、安全側に停止することを設計方針としています。
+**The Fail-Closed Safety Core for Personal AI — Phase 1 of [Pankunn OS](docs/PANKUNN_OS_MANIFESTO_v0.5.en.md)**
 
+> *"Intelligence is free. User rights are guaranteed. The core of safety is unshakable."*
+
+Mother_H is a C++17 safety core providing a Finite State Machine (FSM), authenticated event journaling, resource guards, and checkpoint/recovery mechanisms. Designed around the principle of **"separating AI intelligence from execution authority,"** it enforces a strict **Fail-Closed** posture—halting safely rather than expanding permissions whenever a state cannot be verified.
+
+- **Vision & Philosophy:** Read the **[Pankunn OS Manifesto v0.5 (English)](docs/PANKUNN_OS_MANIFESTO_v0.5.en.md)** / **[日本語版マニフェスト](docs/PANKUNN_OS_MANIFESTO_v0.5.md)** to see the full roadmap from this safety core (Phase 1) to a personal AI OS (Phase 6: JARVIS).
+
+---
+
+Mother_H は、FSM（有限状態機械）、認証付きイベント記録、リソース制限、チェックポイントと復旧処理を提供する C++17 の安全コアです。**「AIの知能と権限を分離する」**という設計思想に基づき、検証できない状態では許可を広げず、安全側に停止（Fail-Closed）することを基本方針としています。
+
+本リポジトリは、個人の生命・安全・プライバシーを守るオープンな AI 基盤 **[Pankunn OS](docs/PANKUNN_OS_MANIFESTO_v0.5.md)** の **Phase 1（安全基盤）** に位置づけられています。プロジェクト全体の理念やロードマップ（Phase 6: JARVIS への構想）については、**[Pankunn OS Manifesto v0.5](docs/PANKUNN_OS_MANIFESTO_v0.5.md)** を参照してください。
 本リポジトリの領域 A（Mother_H 安全コアおよび公開契約仕様）として明示的に指定されたソースコードおよび仕様資産は、**Apache License 2.0 (Apache-2.0)** の下で公開されています。Apache-2.0 の適用範囲と除外対象については [NOTICE](NOTICE) を、ライセンス本文は [LICENSE](LICENSE) を参照してください。著作権・帰属表示は [NOTICE](NOTICE) を、依存ライブラリとライセンスの一覧は [第三者ライセンス一覧](docs/THIRD_PARTY_LICENSES.md) を参照してください。
 
 ## ビルド要件
