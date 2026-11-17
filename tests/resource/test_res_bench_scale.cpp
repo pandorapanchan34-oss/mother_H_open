@@ -1,6 +1,7 @@
-﻿#ifndef MOTHER_H_TEST_BUILD
+#ifndef MOTHER_H_TEST_BUILD
 #error "MOTHER_H_TEST_BUILD must be defined for this test target"
 #endif
+
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -9,28 +10,36 @@
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
+
 #include "mother_H/resource/resource_guard.hpp"
+
 using namespace mother_h::resource;
+
 namespace {
+
 constexpr std::size_t kWarmups = 2;
 constexpr std::size_t kRepeats = 7;
 constexpr std::uint64_t kRecordBytes = 100;
 constexpr std::uint64_t kPayloadBytes = 50;
+constexpr std::uint64_t kMinRecordsPerSample = 10000;
+
 constexpr std::array<std::uint64_t, 6> kScales{
     1, 10, 100, 1000, 10000, 100000
 };
+
 ResourceLimits make_bench_limits() {
     ResourceLimits limits;
     limits.max_record_bytes = 10000;
     limits.max_payload_bytes = 10000;
-    limits.max_total_input_bytes = 1000000000ULL;
-    limits.max_records = 10000000ULL;
+    limits.max_total_input_bytes = 10000000000ULL;
+    limits.max_records = 100000000ULL;
     limits.max_profiles = 100;
     limits.max_failure_codes_per_profile = 100;
-    limits.max_steps = 10000000ULL;
+    limits.max_steps = 100000000ULL;
     limits.max_elapsed_time_us = 1000000000ULL;
     return limits;
 }
+
 bool check_usage(
     const ResourceGuard& guard,
     std::uint64_t expected_records
@@ -48,57 +57,80 @@ bool check_usage(
         usage.steps == 0 &&
         usage.elapsed_time_us == 0;
 }
+
+std::uint64_t inner_iterations_for(std::uint64_t count) {
+    if (count >= kMinRecordsPerSample) {
+        return 1;
+    }
+    return (kMinRecordsPerSample + count - 1) / count;
+}
+
 bool run_single(
     std::uint64_t count,
-    std::uint64_t& elapsed_ns
+    std::uint64_t inner_iters,
+    std::uint64_t& elapsed_ns_per_call
 ) {
     ResourceGuard guard(make_bench_limits());
     const auto start = std::chrono::steady_clock::now();
-    for (std::uint64_t i = 0; i < count; ++i) {
-        if (guard.consume_input(
-                kRecordBytes, kPayloadBytes) != ResourceStatus::Ok) {
+    for (std::uint64_t iter = 0; iter < inner_iters; ++iter) {
+        for (std::uint64_t i = 0; i < count; ++i) {
+            if (guard.consume_input(
+                    kRecordBytes, kPayloadBytes) != ResourceStatus::Ok) {
+                return false;
+            }
+        }
+    }
+    const auto end = std::chrono::steady_clock::now();
+    const auto total_ns = static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+            end - start).count());
+    elapsed_ns_per_call = (std::max)(std::uint64_t{1}, total_ns / inner_iters);
+    return total_ns > 0 && check_usage(guard, count * inner_iters);
+}
+
+bool run_batch(
+    const std::vector<InputRecord>& batch,
+    std::uint64_t inner_iters,
+    std::uint64_t& elapsed_ns_per_call
+) {
+    ResourceGuard guard(make_bench_limits());
+    const auto start = std::chrono::steady_clock::now();
+    for (std::uint64_t iter = 0; iter < inner_iters; ++iter) {
+        const ResourceStatus status =
+            guard.consume_input_batch(
+                batch.data(),
+                static_cast<std::uint64_t>(batch.size()));
+        if (status != ResourceStatus::Ok) {
             return false;
         }
     }
     const auto end = std::chrono::steady_clock::now();
-    elapsed_ns = static_cast<std::uint64_t>(
+    const auto total_ns = static_cast<std::uint64_t>(
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             end - start).count());
-    return check_usage(guard, count);
-}
-bool run_batch(
-    const std::vector<InputRecord>& batch,
-    std::uint64_t& elapsed_ns
-) {
-    ResourceGuard guard(make_bench_limits());
-    const auto start = std::chrono::steady_clock::now();
-    const ResourceStatus status =
-        guard.consume_input_batch(
-            batch.data(),
-            static_cast<std::uint64_t>(batch.size()));
-    const auto end = std::chrono::steady_clock::now();
-    elapsed_ns = static_cast<std::uint64_t>(
-        std::chrono::duration_cast<std::chrono::nanoseconds>(
-            end - start).count());
-    return status == ResourceStatus::Ok &&
+    elapsed_ns_per_call = (std::max)(std::uint64_t{1}, total_ns / inner_iters);
+    return total_ns > 0 &&
         check_usage(
             guard,
-            static_cast<std::uint64_t>(batch.size()));
+            static_cast<std::uint64_t>(batch.size()) * inner_iters);
 }
+
 std::uint64_t median(
     std::array<std::uint64_t, kRepeats> samples
 ) {
     std::sort(samples.begin(), samples.end());
     return samples[kRepeats / 2];
 }
+
 bool measure_scale(std::uint64_t count) {
     const std::vector<InputRecord> batch(
         static_cast<std::size_t>(count),
         InputRecord{kRecordBytes, kPayloadBytes});
+    const std::uint64_t inner_iters = inner_iterations_for(count);
     std::uint64_t ignored = 0;
     for (std::size_t i = 0; i < kWarmups; ++i) {
-        if (!run_single(count, ignored) ||
-            !run_batch(batch, ignored)) {
+        if (!run_single(count, inner_iters, ignored) ||
+            !run_batch(batch, inner_iters, ignored)) {
             std::fprintf(
                 stderr,
                 "Warm-up failed at %llu records\n",
@@ -109,14 +141,14 @@ bool measure_scale(std::uint64_t count) {
     std::array<std::uint64_t, kRepeats> single_samples{};
     std::array<std::uint64_t, kRepeats> batch_samples{};
     for (std::size_t i = 0; i < kRepeats; ++i) {
-        if (!run_single(count, single_samples[i])) {
+        if (!run_single(count, inner_iters, single_samples[i])) {
             std::fprintf(
                 stderr,
                 "Single measurement failed at %llu records\n",
                 static_cast<unsigned long long>(count));
             return false;
         }
-        if (!run_batch(batch, batch_samples[i])) {
+        if (!run_batch(batch, inner_iters, batch_samples[i])) {
             std::fprintf(
                 stderr,
                 "Batch measurement failed at %llu records\n",
@@ -149,7 +181,9 @@ bool measure_scale(std::uint64_t count) {
         speedup);
     return true;
 }
+
 } // namespace
+
 int main() {
     std::printf(
         "Records | Single ns | Batch ns | Single ns/rec | Batch ns/rec | Speedup\n");
