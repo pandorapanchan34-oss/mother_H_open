@@ -207,29 +207,6 @@ if(BUILD_TESTING)
         test_mother_h_fsm_security
         test_journal_checkpoint_backend_fail_closed
     )
-    set(_assert_enabled_targets
-        test_policy_engine
-        test_op_executor
-        test_op5_torus
-        test_op_registry
-        test_journal_integrity
-        test_journal_integrity_atomicity
-        test_journal_checkpoint_isolation
-        test_journal_recovery_policy
-        test_journal_feedback_engine
-        test_resource_guard
-        test_mother_h_fsm_policy_contracts
-        test_jarvis_ignition_v2
-        test_mother_h_fsm_transition
-        test_mother_h_fsm_history
-        test_mother_h_fsm_parent
-        test_mother_h_fsm_security
-        test_journal_checkpoint_backend_fail_closed
-        test_dynamic_policy_engine
-        test_dynamic_policy_invariants
-        test_dynamic_policy_execution
-        test_checkpoint_isolation_rejections
-    )
 
     foreach(_target IN ITEMS mother_H_engine ${MOTHER_H_TEST_TARGETS})
         if(MSVC)
@@ -272,13 +249,6 @@ if(BUILD_TESTING)
         endif()
     endforeach()
 
-    foreach(_target IN LISTS _assert_enabled_targets)
-        if(MSVC)
-            target_compile_options("${_target}" PRIVATE /UNDEBUG)
-        else()
-            target_compile_options("${_target}" PRIVATE -UNDEBUG)
-        endif()
-    endforeach()
 endif()
 # Monotonic Checkpoint Anchor & Poison Latch Unit Tests (MCA-01..07)
 add_executable(test_monotonic_checkpoint_anchor_unit
@@ -293,30 +263,43 @@ if(MINGW)
 elseif(OpenSSL_FOUND)
     target_link_libraries(test_monotonic_checkpoint_anchor_unit PRIVATE OpenSSL::Crypto)
 endif()
+
 if(MSVC)
-    target_compile_options(test_monotonic_checkpoint_anchor_unit PRIVATE /W4 /WX)
+    target_compile_options(test_monotonic_checkpoint_anchor_unit PRIVATE
+        /W4 /WX
+    )
 else()
-    target_compile_options(test_monotonic_checkpoint_anchor_unit PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    target_compile_options(test_monotonic_checkpoint_anchor_unit PRIVATE
+        -Wall -Wextra -Wpedantic -Werror
+    )
 endif()
 add_test(NAME monotonic_checkpoint_anchor_unit COMMAND test_monotonic_checkpoint_anchor_unit)
+
 # =====================================================================
-# =====================================================================
-# Enforce assertions (-UNDEBUG / /UNDEBUG) across ALL test executables
-# even in Release / RelWithDebInfo builds (MOTHER_H_ENFORCE_TEST_ASSERTIONS_IN_RELEASE)
+# Enforce assertions across all registered test executables.
+# Keep this separate from the production engine target.
+# MOTHER_H_ENFORCE_TEST_ASSERTIONS_IN_RELEASE
 # =====================================================================
 if(BUILD_TESTING)
-    get_property(_all_dir_targets DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" PROPERTY BUILDSYSTEM_TARGETS)
-    foreach(_t IN LISTS _all_dir_targets)
-        get_target_property(_t_type "${_t}" TYPE)
-        if(_t_type STREQUAL "EXECUTABLE")
+    set(_mother_h_assert_targets
+        ${MOTHER_H_TEST_TARGETS}
+        test_monotonic_checkpoint_anchor_unit
+    )
+
+    foreach(_test_target IN LISTS _mother_h_assert_targets)
+        if(TARGET "${_test_target}")
             if(MSVC)
-                target_compile_options("${_t}" PRIVATE /UNDEBUG)
+                target_compile_options("${_test_target}" PRIVATE /UNDEBUG)
             else()
-                target_compile_options("${_t}" PRIVATE -UNDEBUG)
+                target_compile_options("${_test_target}" PRIVATE -UNDEBUG)
             endif()
             if(WIN32)
-                target_link_libraries("${_t}" PRIVATE crypt32)
+                target_link_libraries("${_test_target}" PRIVATE crypt32)
             endif()
+        else()
+            message(FATAL_ERROR
+                "Expected test target does not exist: ${_test_target}"
+            )
         endif()
     endforeach()
 endif()
