@@ -280,3 +280,22 @@ if(BUILD_TESTING)
         endif()
     endforeach()
 endif()
+# Monotonic Checkpoint Anchor & Poison Latch Unit Tests (MCA-01..07)
+add_executable(test_monotonic_checkpoint_anchor_unit
+    tests/journal/test_monotonic_checkpoint_anchor_unit.cpp
+)
+target_include_directories(test_monotonic_checkpoint_anchor_unit PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+target_compile_features(test_monotonic_checkpoint_anchor_unit PRIVATE cxx_std_17)
+if(MINGW)
+    target_link_libraries(test_monotonic_checkpoint_anchor_unit PRIVATE crypto)
+elseif(OpenSSL_FOUND)
+    target_link_libraries(test_monotonic_checkpoint_anchor_unit PRIVATE OpenSSL::Crypto)
+endif()
+if(MSVC)
+    target_compile_options(test_monotonic_checkpoint_anchor_unit PRIVATE /W4 /WX)
+else()
+    target_compile_options(test_monotonic_checkpoint_anchor_unit PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME monotonic_checkpoint_anchor_unit COMMAND test_monotonic_checkpoint_anchor_unit)
